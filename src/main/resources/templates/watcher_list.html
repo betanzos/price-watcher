@@ -1,0 +1,164 @@
+<!--
+Copyright 2019 Eduardo E. Betanzos Morales
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+   http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+-->
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Price Watcher</title>
+
+    <link rel="stylesheet" type="text/css" th:href="@{/css/style.css}"/>
+    <link rel="stylesheet" th:href="@{/css/bootstrap-4.3.1.min.css}">
+
+    <script th:src="@{/js/jquery-3.2.1.slim.min.js}"></script>
+    <script th:src="@{/js/bootstrap-4.0.0.min.js}"></script>
+</head>
+<body>
+    <!-- Confirm remove modal dialog -->
+    <div class="modal fade" id="removeModal" tabindex="-1" role="dialog" aria-labelledby="removeModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="exampleModalLabel">Confirmation</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    Remove price watcher? This operation is irreversible.
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                    <button id="btnRemove" type="button" class="btn btn-danger" data-dismiss="modal" onclick="removeWatcher()">
+                        <span id="btnRemoveSpinner" style="display: none" class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                        Remove
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Error modal dialog -->
+    <div th:replace="fragments/modals :: errorMsg"></div>
+
+    <header>
+        <a th:href="@{/}">
+            <img class="logo" th:src="@{/img/logo.png}" />
+            <h1 class="app-name">Price Watcher</h1>
+        </a>
+    </header>
+
+    <section>
+        <div th:each="item : ${pricesList}" th:id="'product' + ${item.id}" class="card mb-3" style="max-width: 100%; margin: 10px;">
+            <a th:href="${item.url}" target="_blank" style="text-decoration: none; color: inherit;">
+                <div class="row no-gutters">
+                    <div class="col-md-2">
+                        <img th:src="'data:image/png;base64, ' + ${item.imageBase64}" class="card-img" alt="item" style="display: block; margin-left: auto; margin-right: auto; max-height: 350px; max-width: 350px;">
+                    </div>
+                    <div class="col-md-10">
+                        <div class="card-body">
+                            <h5 class="card-title" th:style="'float: left; font-weight: bold;' + ${item.currentPrice > item.priceToWatch ? 'color: red;' : 'color: green;'}" th:text="'$' + ${#numbers.formatDecimal(item.currentPrice,1,'COMMA',2,'POINT')}"></h5>
+                            <p style="margin-left: 5px" th:text="'&nbsp;(watching $' + ${#numbers.formatDecimal(item.priceToWatch,1,'COMMA',2,'POINT')} + ')'"></p>
+                            <p class="card-text" th:text="${item.title}"></p>
+                            <p class="card-text" style="margin: 0"><small class="text-muted" th:text="'Last update ' + ${#temporals.format(item.currentPriceTime, 'dd MMM yyyy HH:mm')}"></small></p>
+                            <p class="card-text"><small class="text-muted" th:text="'Watching since ' + ${#temporals.format(item.addedTime, 'dd MMM yyyy HH:mm')}"></small></p>
+
+                            <img th:src="@{/img/remove.png}" style="height: 25px; width: 25px; margin-top: 5px;" th:alt="${item.id}" onclick="showRemoveConfirmDialog()">
+                        </div>
+                    </div>
+                </div>
+            </a>
+        </div>
+
+        <button id="addBtn" type="button" class="btn btn-default btn-circle btn-xl" style="position: fixed; bottom: 50px; right: 25px;">+</button>
+    </section>
+
+    <footer>
+        <p>&copy; 2019 Eduardo Betanzos</p>
+    </footer>
+
+    <script>
+        let msgModal = $('#msgModal');
+        let msgModalBody = document.getElementById('msgModalBody');
+
+        let btnRemove = document.getElementById('btnRemove');
+        let btnRemoveSpinner = document.getElementById('btnRemoveSpinner');
+        let addBtn = document.getElementById('addBtn');
+        let watcherIdToRemove = undefined;
+
+        addBtn.addEventListener('click', evt => {
+            window.location = '/add-watcher';
+        })
+
+        let showRemoveConfirmDialog = () => {
+            event.preventDefault();
+            event.stopPropagation();
+
+            watcherIdToRemove = event.target.alt;
+
+            btnRemove.disabled = false;
+            btnRemoveSpinner.style.display = "none";
+            $('#removeModal').modal('show');
+        };
+
+        let removeWatcher = () => {
+            let req = {
+                method: 'DELETE'
+            };
+
+            btnRemove.disabled = true;
+            btnRemoveSpinner.style.display = "";
+
+            fetch('/api/watchers/' + watcherIdToRemove, req)
+                .then(res => {
+                    if (res.ok) {
+                        document.getElementById('product' + watcherIdToRemove).remove();
+                    } else {
+                        res.body.getReader().read()
+                            .then(data => {
+                                let bodyStr = new TextDecoder("utf-8").decode(data.value)
+                                let bodyObj = JSON.parse(bodyStr);
+                                showMessage(bodyObj.msg);
+                            })
+                    }
+
+                    $('#removeModal').modal('hide');
+                })
+                .catch(err => console.error(err));
+        };
+
+        $('#removeModal').on('hide.bs.modal', function (e) {
+            watcherIdToRemove = undefined;
+        })
+
+        let showMessage = (msg) => {
+            msgModalBody.innerText = msg;
+            msgModal.modal('show');
+        }
+
+        msgModal.on('show.bs.modal', event => {
+            let button = $(event.relatedTarget) // Button that triggered the modal
+            let recipient = button.data('whatever') // Extract info from data-* attributes
+            // If necessary, you could initiate an AJAX request here (and then do the updating in a callback).
+            // Update the modal's content. We'll use jQuery here, but you could use a data binding library or other methods instead.
+            let modal = $(this)
+            modal.find('.modal-title').text('New message to ' + recipient)
+            modal.find('.modal-body input').val(recipient)
+        });
+    </script>
+</body>
+</html>

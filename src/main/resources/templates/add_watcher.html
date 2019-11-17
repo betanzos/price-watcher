@@ -1,0 +1,153 @@
+<!--
+Copyright 2019 Eduardo E. Betanzos Morales
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+   http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+-->
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Price Watcher</title>
+
+    <link rel="stylesheet" type="text/css" th:href="@{/css/style.css}"/>
+    <link rel="stylesheet" th:href="@{/css/bootstrap-4.3.1.min.css}">
+
+    <script th:src="@{/js/jquery-3.2.1.slim.min.js}"></script>
+    <script th:src="@{/js/bootstrap-4.0.0.min.js}"></script>
+</head>
+<body>
+    <!-- Error modal dialog -->
+    <div th:replace="fragments/modals :: errorMsg"></div>
+
+    <header>
+        <a th:href="@{/}">
+            <img class="logo" th:src="@{/img/logo.png}" />
+            <h1 class="app-name">Price Watcher</h1>
+        </a>
+    </header>
+
+    <section>
+        <div class="add-form">
+            <form id="addForm" class="needs-validation" novalidate>
+                <div class="form-group">
+                    <label for="productUrl">Product URL</label>
+                    <input id="productUrl" type="url" class="form-control" placeholder="e.g. https://www.amazon.com.mx/product1" required>
+                    <div class="invalid-feedback">
+                        Please provide a valid URL
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="priceToWatch">Price to watch</label>
+                    <input id="priceToWatch" type="number" class="form-control" step=".01" placeholder="e.g. 55.35" min="0.01" required>
+                    <small class="form-text text-muted">Enter the price you want to wait for</small>
+                    <div class="invalid-feedback">
+                        Please provide a valid decimal number
+                    </div>
+                </div>
+                <div class="form-group">
+                    <button id="btnSave" type="button" class="btn btn-primary" style="width: 100%">
+                        <span id="btnSaveSpinner" style="display: none" class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                        Save
+                    </button>
+                </div>
+            </form>
+        </div>
+
+    </section>
+
+    <footer>
+        <p>&copy; 2019 Eduardo Betanzos</p>
+    </footer>
+
+    <script>
+        let msgModal = $('#msgModal');
+        let msgModalBody = document.getElementById('msgModalBody');
+
+
+        let form = document.getElementById('addForm');
+        let productUrl = document.getElementById('productUrl');
+        let priceToWatch = document.getElementById('priceToWatch');
+        let btnSave = document.getElementById('btnSave');
+        let btnSaveSpinner = document.getElementById('btnSaveSpinner');
+
+        let showMessage = (msg) => {
+            msgModalBody.innerText = msg;
+            msgModal.modal('show');
+        }
+
+        msgModal.on('show.bs.modal', event => {
+            let button = $(event.relatedTarget) // Button that triggered the modal
+            let recipient = button.data('whatever') // Extract info from data-* attributes
+            // If necessary, you could initiate an AJAX request here (and then do the updating in a callback).
+            // Update the modal's content. We'll use jQuery here, but you could use a data binding library or other methods instead.
+            let modal = $(this)
+            modal.find('.modal-title').text('New message to ' + recipient)
+            modal.find('.modal-body input').val(recipient)
+        });
+
+        function decorateValidatedElement(formElement) {
+            if (formElement.validity.valid === true) {
+                formElement.classList.add('is-valid');
+                formElement.classList.remove('is-invalid');
+            } else {
+                formElement.classList.add('is-invalid');
+                formElement.classList.remove('is-valid');
+            }
+        }
+
+        btnSave.addEventListener('click', event => {
+            if (form.checkValidity() === true) {
+                let data = {
+                    url: productUrl.value,
+                    price: priceToWatch.value
+                }
+
+                let req = {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                };
+
+                btnSave.disabled = true;
+                btnSaveSpinner.style.display = "";
+
+                fetch('/api/watchers', req)
+                    .then(res => {
+                        if (res.ok) {
+                            window.location = '/';
+                        } else {
+                            res.body.getReader().read()
+                                .then(data => {
+                                    let bodyStr = new TextDecoder("utf-8").decode(data.value)
+                                    let bodyObj = JSON.parse(bodyStr);
+                                    showMessage(bodyObj.msg);
+                                })
+                        }
+                    })
+                    .catch(err => console.error(err))
+                    .finally(() => {
+                        btnSave.disabled = false;
+                        btnSaveSpinner.style.display = 'none';
+                    });
+            }
+
+            decorateValidatedElement(productUrl);
+            decorateValidatedElement(priceToWatch);
+        }, false);
+    </script>
+</body>
+</html>
