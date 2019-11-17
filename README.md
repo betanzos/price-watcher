@@ -3,7 +3,7 @@ Online stores price watcher.
 
 The main idea is that you can create observers for those products you want to buy but at a lower price. Price Watcher will send you a notification email (if enable) when a product price is less than expected (require some configuration).
 
-Price Watcher have a very simple and responsive web interface for add, remove and list product watchers. All of there is stored in a H2 database which is persisted in user home directory.
+Price Watcher have a very simple and responsive web interface for add, remove and list product watchers. All of there are stored in a H2 database which is persisted in user home directory.
 
 Created for my wife, Helen (again!). :grinning:
 
@@ -75,7 +75,7 @@ repository.
 
 The following command copy the image from Docker Hub to your local machine:
 ```
-> docker pull ebetanzos/price-watcher
+> docker pull ebetanzos/price-watcher[:tag]
 ```
 
 Now you can run one instance of this image using `docker-run.sh` script changing image name to `ebetanzos\price-watcher[:tag]`.
@@ -91,7 +91,7 @@ docker run --name 'price-watcher' --restart on-failure:3 -d -p 80:8080 \
 -e SPRING_MAIL_USERNAME=my.email@myserver.com \
 -e SPRING_MAIL_PASSWORD=secret \
 -e APP_NOTIFICATION_MAIL_TO=another.email@gmail.com \
-price-watcher:1.0
+price-watcher[:tag]
 ```
 
 For more details see [Setting up email notifications](#setting-up-email-notifications) with JAR files.
