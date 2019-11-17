@@ -1,5 +1,6 @@
 src/main/resources/application-dev.properties
 docker-run-private.sh
+README-docker_hub.md
 target/
 
 ### STS ###
